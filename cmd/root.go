@@ -2,6 +2,7 @@ package cmd
 
 import (
 	"fmt"
+	"github.com/XxThunderBlastxX/helpers"
 	"github.com/spf13/cobra"
 	"os"
 )
@@ -20,4 +21,8 @@ func Execute() {
 		fmt.Println(err)
 		os.Exit(1)
 	}
+}
+
+func init() {
+	helpers.ThunderHeader()
 }
