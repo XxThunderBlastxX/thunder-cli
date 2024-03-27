@@ -10,6 +10,14 @@ import (
 	"github.com/charmbracelet/lipgloss"
 
 	"github.com/XxThunderBlastxX/thunder-cli/internal/model"
+	"github.com/XxThunderBlastxX/thunder-cli/pkg/utils"
+)
+
+const (
+	progressBarWidth  = 71
+	progressFullChar  = "█"
+	progressEmptyChar = "░"
+	dotChar           = " • "
 )
 
 var (
@@ -19,22 +27,28 @@ var (
 	noStyle             = lipgloss.NewStyle()
 	helpStyle           = blurredStyle.Copy()
 	cursorModeHelpStyle = lipgloss.NewStyle().Foreground(lipgloss.Color("244"))
+	viewStyle           = lipgloss.NewStyle().MarginLeft(2)
 
 	focusedButton = focusedStyle.Copy().Render("[ Submit ]")
 	blurredButton = fmt.Sprintf("[ %s ]", blurredStyle.Render("Submit"))
+
+	// Gradient colors we'll use for the progress bar
+	ramp = utils.MakeRampStyles("#B14FFF", "#00FFA3", progressBarWidth)
 )
 
 type ProjectView struct {
-	focusIndex int
-	inputs     []textinput.Model
-	cursorMode cursor.Mode
-	project    model.Project
+	focusIndex  int
+	inputs      []textinput.Model
+	cursorMode  cursor.Mode
+	project     model.Project
+	isSubmitted bool
 }
 
 func InitialModel() ProjectView {
 	m := ProjectView{
-		inputs:  make([]textinput.Model, 4),
-		project: model.Project{},
+		inputs:      make([]textinput.Model, 4),
+		project:     model.Project{},
+		isSubmitted: false,
 	}
 
 	var t textinput.Model
@@ -66,28 +80,28 @@ func InitialModel() ProjectView {
 	return m
 }
 
-func (m ProjectView) Init() tea.Cmd {
+func (p ProjectView) Init() tea.Cmd {
 	return textinput.Blink
 }
 
-func (m ProjectView) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
+func (p ProjectView) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	switch msg := msg.(type) {
 	case tea.KeyMsg:
 		switch msg.String() {
 		case "ctrl+c", "esc":
-			return m, tea.Quit
+			return p, tea.Quit
 
 		// Change cursor mode
 		case "ctrl+r":
-			m.cursorMode++
-			if m.cursorMode > cursor.CursorHide {
-				m.cursorMode = cursor.CursorBlink
+			p.cursorMode++
+			if p.cursorMode > cursor.CursorHide {
+				p.cursorMode = cursor.CursorBlink
 			}
-			cmds := make([]tea.Cmd, len(m.inputs))
-			for i := range m.inputs {
-				cmds[i] = m.inputs[i].Cursor.SetMode(m.cursorMode)
+			cmds := make([]tea.Cmd, len(p.inputs))
+			for i := range p.inputs {
+				cmds[i] = p.inputs[i].Cursor.SetMode(p.cursorMode)
 			}
-			return m, tea.Batch(cmds...)
+			return p, tea.Batch(cmds...)
 
 		// Set focus to next input
 		case "tab", "shift+tab", "enter", "up", "down":
@@ -95,96 +109,106 @@ func (m ProjectView) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 
 			// Did the user press enter while the submit button was focused?
 			// If so, exit.
-			if s == "enter" && m.focusIndex == len(m.inputs) {
-				// TODO: remove this line
-				fmt.Println(m.project)
-				return m, tea.Quit
+			if s == "enter" && p.focusIndex == len(p.inputs) {
+				p.isSubmitted = true
+				return p, nil
 			}
 
 			// Cycle indexes
 			if s == "up" || s == "shift+tab" {
-				m.focusIndex--
+				p.focusIndex--
 			} else {
-				m.focusIndex++
+				p.focusIndex++
 			}
 
-			if m.focusIndex > len(m.inputs) {
-				m.focusIndex = 0
-			} else if m.focusIndex < 0 {
-				m.focusIndex = len(m.inputs)
+			if p.focusIndex > len(p.inputs) {
+				p.focusIndex = 0
+			} else if p.focusIndex < 0 {
+				p.focusIndex = len(p.inputs)
 			}
 
-			cmds := make([]tea.Cmd, len(m.inputs))
-			for i := 0; i <= len(m.inputs)-1; i++ {
-				if i == m.focusIndex {
+			cmds := make([]tea.Cmd, len(p.inputs))
+			for i := 0; i <= len(p.inputs)-1; i++ {
+				if i == p.focusIndex {
 					// Set focused state
-					cmds[i] = m.inputs[i].Focus()
-					m.inputs[i].PromptStyle = focusedStyle
-					m.inputs[i].TextStyle = focusedStyle
+					cmds[i] = p.inputs[i].Focus()
+					p.inputs[i].PromptStyle = focusedStyle
+					p.inputs[i].TextStyle = focusedStyle
 					continue
 				}
 				// Remove focused state
-				m.inputs[i].Blur()
-				m.inputs[i].PromptStyle = noStyle
-				m.inputs[i].TextStyle = noStyle
+				p.inputs[i].Blur()
+				p.inputs[i].PromptStyle = noStyle
+				p.inputs[i].TextStyle = noStyle
 
 				switch i {
 				case 0:
-					m.project.Name = m.inputs[i].Value()
+					p.project.Name = p.inputs[i].Value()
 				case 1:
-					m.project.Link = m.inputs[i].Value()
+					p.project.Link = p.inputs[i].Value()
 				case 2:
-					m.project.Description = m.inputs[i].Value()
+					p.project.Description = p.inputs[i].Value()
 				case 3:
-					a := strings.Split(m.inputs[i].Value(), ",")
-					m.project.Stacks = nil
+					a := strings.Split(p.inputs[i].Value(), ",")
+					p.project.Stacks = nil
 					for i := range a {
-						m.project.Stacks = append(m.project.Stacks, model.TechStack{Name: a[i]})
+						p.project.Stacks = append(p.project.Stacks, model.TechStack{Name: a[i]})
 					}
 				}
 			}
 
-			return m, tea.Batch(cmds...)
+			return p, tea.Batch(cmds...)
 		}
 	}
 
 	// Handle character input and blinking
-	cmd := m.updateInputs(msg)
+	cmd := p.updateInputs(msg)
 
-	return m, cmd
+	return p, cmd
 }
 
-func (m *ProjectView) updateInputs(msg tea.Msg) tea.Cmd {
-	cmds := make([]tea.Cmd, len(m.inputs))
+func (p *ProjectView) updateInputs(msg tea.Msg) tea.Cmd {
+	cmds := make([]tea.Cmd, len(p.inputs))
 
 	// Only text inputs with Focus() set will respond, so it's safe to simply
 	// update all of them here without any further logic.
-	for i := range m.inputs {
-		m.inputs[i], cmds[i] = m.inputs[i].Update(msg)
+	for i := range p.inputs {
+		p.inputs[i], cmds[i] = p.inputs[i].Update(msg)
 	}
 
 	return tea.Batch(cmds...)
 }
 
-func (m ProjectView) View() string {
+func (p ProjectView) View() string {
+	if p.isSubmitted {
+		return p.submitFormView()
+	}
+	return p.formView()
+}
+
+func (p *ProjectView) formView() string {
 	var b strings.Builder
 
-	for i := range m.inputs {
-		b.WriteString(m.inputs[i].View())
-		if i < len(m.inputs)-1 {
+	for i := range p.inputs {
+		b.WriteString(p.inputs[i].View())
+		if i < len(p.inputs)-1 {
 			b.WriteRune('\n')
 		}
 	}
 
 	button := &blurredButton
-	if m.focusIndex == len(m.inputs) {
+	if p.focusIndex == len(p.inputs) {
 		button = &focusedButton
 	}
 	fmt.Fprintf(&b, "\n\n%s\n\n", *button)
 
 	b.WriteString(helpStyle.Render("cursor mode is "))
-	b.WriteString(cursorModeHelpStyle.Render(m.cursorMode.String()))
+	b.WriteString(cursorModeHelpStyle.Render(p.cursorMode.String()))
 	b.WriteString(helpStyle.Render(" (ctrl+r to change style)"))
 
-	return b.String()
+	return viewStyle.Render(b.String())
+}
+
+func (p *ProjectView) submitFormView() string {
+	return viewStyle.Render("Loading...")
 }
