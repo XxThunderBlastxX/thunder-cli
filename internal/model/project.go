@@ -5,6 +5,7 @@ type Project struct {
 	Link        string      `json:"link"`
 	Description string      `json:"description"`
 	Stacks      []TechStack `json:"stacks"`
+	Submitted   bool
 }
 
 type TechStack struct {

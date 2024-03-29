@@ -12,7 +12,12 @@ import (
 
 func AddProjectAction() cli.ActionFunc {
 	return func(c *cli.Context) error {
-		if _, err := tea.NewProgram(view.InitialModel()).Run(); err != nil {
+		//h := &http.Client{
+		//	Timeout: time.Minute * 2,
+		//}
+		//s := service.NewProjectService(h, "https://api.koustav.dev")
+
+		if _, err := tea.NewProgram(view.NewAddProjectView()).Run(); err != nil {
 			fmt.Printf("could not start program: %s\n", err)
 			os.Exit(1)
 		}
