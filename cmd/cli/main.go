@@ -7,7 +7,7 @@ import (
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/urfave/cli/v2"
 
-	c "github.com/XxThunderBlastxX/thunder-cli/internal/cmd"
+	"github.com/XxThunderBlastxX/thunder-cli/internal/cmd"
 )
 
 func main() {
@@ -26,7 +26,7 @@ func main() {
 	app := &cli.App{
 		Name:   "thunder",
 		Usage:  "used to interact with thunder-api",
-		Action: c.RootAction(),
+		Action: cmd.RootAction(),
 		Commands: []*cli.Command{
 			{
 				Name:  "project",
@@ -35,7 +35,7 @@ func main() {
 					{
 						Name:   "add",
 						Usage:  "add a project",
-						Action: c.AddProjectAction(),
+						Action: cmd.AddProjectAction(),
 					},
 				},
 			},
