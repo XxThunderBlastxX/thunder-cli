@@ -34,6 +34,7 @@ var (
 	link        string
 	description string
 	stack       string
+	submit      bool
 )
 
 type (
@@ -53,7 +54,8 @@ type AddProjectViewModel struct {
 	// quitting is true when user wants to quit the view
 	quitting bool
 
-	err error
+	Err   error
+	Abort bool
 
 	// help is a help.Model that displays help text
 	help help.Model
@@ -64,8 +66,8 @@ type AddProjectViewModel struct {
 	// keymap is the keybindings for the view
 	keymap utils.KeyMap
 
-	// isSubmitted is true when user has submitted the form
-	isSubmitted bool
+	// IsSubmitted is true when user has submitted the form
+	IsSubmitted bool
 
 	// projService is the service instance for project
 	projService *service.IProject
@@ -78,35 +80,37 @@ func NewAddProjectView(projService *service.IProject) AddProjectViewModel {
 				Title("Name of the Project ?").
 				Placeholder("Enter project name").
 				CharLimit(50).
-				Prompt("?").
+				Prompt("? ").
 				Value(&name),
 
 			huh.NewInput().
 				Title("Link to the Project ?").
 				Placeholder("Enter project link").
 				CharLimit(50).
-				Prompt("?").
+				Prompt("? ").
 				Value(&link),
 
 			huh.NewInput().
 				Title("Description of the Project ?").
 				Placeholder("Enter short description of project").
 				CharLimit(100).
-				Prompt("?").
+				Prompt("? ").
 				Value(&description),
 
 			huh.NewInput().
 				Title("Tech Stack used in the Project ?").
 				Placeholder("Enter tech stack with comma seperated values").
 				CharLimit(50).
-				Prompt("?").
+				Prompt("? ").
 				Value(&stack),
 
 			huh.NewConfirm().
 				Title("Are you sure want to submit ?").
 				Affirmative("Submit").
-				Negative("Cancel"),
-		).WithTheme(huh.ThemeCharm()),
+				Negative("Cancel").
+				Value(&submit),
+		).
+			WithTheme(huh.ThemeCharm()),
 	)
 
 	loadingSpinner := spinner.New()
@@ -117,7 +121,6 @@ func NewAddProjectView(projService *service.IProject) AddProjectViewModel {
 		help:           help.New(),
 		loadingSpinner: loadingSpinner,
 		form:           form,
-		isSubmitted:    false,
 		quitting:       false,
 		keymap:         utils.DefaultKeyMap(),
 		projService:    projService,
@@ -127,6 +130,7 @@ func NewAddProjectView(projService *service.IProject) AddProjectViewModel {
 }
 
 func (p AddProjectViewModel) Init() tea.Cmd {
+	submit = false
 	return tea.Batch(
 		p.form.Init(),
 	)
@@ -138,14 +142,14 @@ func (p AddProjectViewModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		p.state = successAddProject
 		return p, tea.Quit
 	case errorAddProjectMsg:
-		// TODO: Handle error properly
 		log.Println("Error adding project: ", msg.err)
-		p.err = errors.New("could not add project. Please try again")
+		p.Err = errors.New("🥲 Could not add project. Please try again later")
 		return p, tea.Quit
 	case tea.KeyMsg:
 		switch {
 		case key.Matches(msg, p.keymap.Quit):
 			p.quitting = true
+			p.Abort = true
 			return p, tea.Quit
 		case key.Matches(msg, p.keymap.NextInput):
 			return p, p.form.NextField()
@@ -167,9 +171,17 @@ func (p AddProjectViewModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 
 	// If the form is submitted, send the add project request
 	if p.form.State == huh.StateCompleted && p.state == editing {
-		p.state = sendingAddProjectReq
-		cmds = append(cmds, p.addProjectCmd())
-		cmds = append(cmds, p.loadingSpinner.Tick)
+		if submit {
+			p.IsSubmitted = true
+			p.state = sendingAddProjectReq
+			cmds = append(cmds, p.addProjectCmd())
+			cmds = append(cmds, p.loadingSpinner.Tick)
+		} else {
+			p.quitting = true
+			p.Abort = true
+			p.IsSubmitted = false
+			cmds = append(cmds, tea.Quit)
+		}
 	}
 
 	switch p.state {
@@ -187,13 +199,16 @@ func (p AddProjectViewModel) View() string {
 
 	switch p.form.State {
 	case huh.StateCompleted:
-		s.WriteString(fmt.Sprintf("Wow Cool! Adding your %s project.", name))
-		s.WriteString("\n\n")
-		return style.BorderStyle.Render(s.String() + style.SecondaryStyle.Render(p.loadingSpinner.View()) + "Please wait a moment...")
+		if submit {
+			s.WriteString(fmt.Sprintf("Wow Cool! Adding your %s project.", name))
+			s.WriteString("\n\n")
+			s.WriteString(style.BorderStyle.Render(s.String() + style.SecondaryStyle.Render(p.loadingSpinner.View()) + "Please wait a moment..."))
+		}
 	default:
-		return p.form.View()
+		s.WriteString(p.form.View())
 	}
 
+	return s.String()
 }
 
 // addProjectCmd returns a tea.Cmd that sends the add project request

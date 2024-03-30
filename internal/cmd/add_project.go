@@ -21,11 +21,22 @@ func AddProjectAction() cli.ActionFunc {
 		}
 		s := service.NewProjectService(h, "http://localhost:4040")
 
-		if _, err := tea.NewProgram(view.NewAddProjectView(&s)).Run(); err != nil {
+		p, err := tea.NewProgram(view.NewAddProjectView(&s)).Run()
+		if err != nil {
 			fmt.Printf("could not start program: %s\n", err)
 			os.Exit(1)
 		}
-		fmt.Println(style.AccentStyle.PaddingLeft(1).Render("> ") + "Project added successfully! 🎉")
+
+		m := p.(view.AddProjectViewModel)
+
+		if m.Err != nil {
+			fmt.Println(style.ErrorStyle.PaddingLeft(1).Render(m.Err.Error()))
+		}
+
+		if !m.Abort && m.IsSubmitted && m.Err == nil {
+			fmt.Println(style.AccentStyle.PaddingLeft(1).Render("> ") + "Project added successfully! 🎉")
+		}
+
 		return nil
 	}
 }
