@@ -14,6 +14,7 @@ import (
 
 	"github.com/XxThunderBlastxX/thunder-cli/internal/model"
 	"github.com/XxThunderBlastxX/thunder-cli/internal/service"
+	"github.com/XxThunderBlastxX/thunder-cli/pkg/style"
 	"github.com/XxThunderBlastxX/thunder-cli/pkg/utils"
 )
 
@@ -188,9 +189,7 @@ func (p AddProjectViewModel) View() string {
 	case huh.StateCompleted:
 		s.WriteString(fmt.Sprintf("Wow Cool! Adding your %s project.", name))
 		s.WriteString("\n\n")
-		s.WriteString("Please wait a moment...")
-		s.WriteString("\n")
-		return s.String() + p.loadingSpinner.View()
+		return style.BorderStyle.Render(s.String() + style.SecondaryStyle.Render(p.loadingSpinner.View()) + "Please wait a moment...")
 	default:
 		return p.form.View()
 	}

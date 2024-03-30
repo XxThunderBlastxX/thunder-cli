@@ -10,6 +10,7 @@ import (
 	"github.com/urfave/cli/v2"
 
 	"github.com/XxThunderBlastxX/thunder-cli/internal/service"
+	"github.com/XxThunderBlastxX/thunder-cli/pkg/style"
 	"github.com/XxThunderBlastxX/thunder-cli/pkg/view"
 )
 
@@ -24,7 +25,7 @@ func AddProjectAction() cli.ActionFunc {
 			fmt.Printf("could not start program: %s\n", err)
 			os.Exit(1)
 		}
-		fmt.Println("Project added successfully! 🎉")
+		fmt.Println(style.AccentStyle.PaddingLeft(1).Render("> ") + "Project added successfully! 🎉")
 		return nil
 	}
 }
