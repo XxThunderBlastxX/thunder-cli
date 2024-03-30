@@ -1,30 +1,27 @@
 package utils
 
-import "github.com/charmbracelet/bubbles/key"
+import (
+	"github.com/charmbracelet/bubbles/key"
+	"github.com/charmbracelet/huh"
+)
 
-type KeyMap struct {
-	NextInput key.Binding
-	PrevInput key.Binding
-	Send      key.Binding
-	Quit      key.Binding
-}
+func DefaultKeyMap() *huh.KeyMap {
+	k := huh.NewDefaultKeyMap()
 
-func DefaultKeyMap() KeyMap {
-	return KeyMap{
-		NextInput: key.NewBinding(
-			key.WithKeys("tab", "enter"),
-			key.WithHelp("tab", "next"),
-		),
-		PrevInput: key.NewBinding(
-			key.WithKeys("shift+tab"),
-		),
-		Send: key.NewBinding(
-			key.WithKeys("ctrl+d"),
-			key.WithHelp("ctrl+d", "send"),
-		),
-		Quit: key.NewBinding(
-			key.WithKeys("ctrl+c", "q", "esc"),
-			key.WithHelp("ctrl+c", "quit"),
-		),
-	}
+	k.Input.Next = key.NewBinding(
+		key.WithKeys("tab", "enter", "down"),
+		key.WithHelp("tab", "next"),
+	)
+
+	k.Input.Prev = key.NewBinding(
+		key.WithKeys("shift+tab", "up"),
+		key.WithHelp("shift+tab", "back"),
+	)
+
+	k.Quit = key.NewBinding(
+		key.WithKeys("ctrl+c", "esc"),
+		key.WithHelp("ctrl+c", "quit"),
+	)
+
+	return k
 }

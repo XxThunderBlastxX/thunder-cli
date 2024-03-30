@@ -24,7 +24,6 @@ type AddProjectViewState int
 const (
 	editing AddProjectViewState = iota
 	successAddProject
-	errorAddProject
 	sendingAddProjectReq
 )
 
@@ -45,7 +44,7 @@ type (
 )
 
 type AddProjectViewModel struct {
-	// holds the current state of the view
+	// state holds the current state of the view
 	state AddProjectViewState
 
 	// form to take input from user
@@ -64,7 +63,7 @@ type AddProjectViewModel struct {
 	loadingSpinner spinner.Model
 
 	// keymap is the keybindings for the view
-	keymap utils.KeyMap
+	keymap *huh.KeyMap
 
 	// IsSubmitted is true when user has submitted the form
 	IsSubmitted bool
@@ -110,7 +109,8 @@ func NewAddProjectView(projService *service.IProject) AddProjectViewModel {
 				Negative("Cancel").
 				Value(&submit),
 		).
-			WithTheme(huh.ThemeCharm()),
+			WithTheme(huh.ThemeCharm()).
+			Title(style.AccentStyle.Render("> ") + "Add a new " + style.SecondaryStyle.Render("Project") + "-"),
 	)
 
 	loadingSpinner := spinner.New()
@@ -151,12 +151,6 @@ func (p AddProjectViewModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			p.quitting = true
 			p.Abort = true
 			return p, tea.Quit
-		case key.Matches(msg, p.keymap.NextInput):
-			return p, p.form.NextField()
-		case key.Matches(msg, p.keymap.PrevInput):
-			return p, p.form.PrevField()
-		case key.Matches(msg, p.keymap.Send):
-			return p, nil
 		}
 	}
 
@@ -190,6 +184,8 @@ func (p AddProjectViewModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		cmds = append(cmds, cmd)
 	default:
 	}
+
+	p.form.WithKeyMap(p.keymap)
 
 	return p, tea.Batch(cmds...)
 }

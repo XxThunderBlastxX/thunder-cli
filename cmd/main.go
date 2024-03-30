@@ -11,12 +11,17 @@ import (
 )
 
 func main() {
-	f, err := tea.LogToFile("bubbletea.log", "thunder-cli")
+	f, err := tea.LogToFile("thunder-cli.log", "thunder-cli")
 	if err != nil {
 		log.Fatal(err)
 	}
 
-	defer f.Close()
+	defer func(f *os.File) {
+		err := f.Close()
+		if err != nil {
+			log.Fatal(err)
+		}
+	}(f)
 
 	app := &cli.App{
 		Name:   "thunder",
