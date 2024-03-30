@@ -1,6 +1,11 @@
 package view
 
 import (
+	"errors"
+	"fmt"
+	"log"
+	"strings"
+
 	"github.com/charmbracelet/bubbles/help"
 	"github.com/charmbracelet/bubbles/key"
 	"github.com/charmbracelet/bubbles/spinner"
@@ -8,33 +13,64 @@ import (
 	"github.com/charmbracelet/huh"
 
 	"github.com/XxThunderBlastxX/thunder-cli/internal/model"
+	"github.com/XxThunderBlastxX/thunder-cli/internal/service"
 	"github.com/XxThunderBlastxX/thunder-cli/pkg/utils"
 )
 
 type AddProjectViewState int
 
+// States of the AddProjectView
 const (
-	successAddProject AddProjectViewState = iota
-	editing
+	editing AddProjectViewState = iota
+	successAddProject
+	errorAddProject
+	sendingAddProjectReq
 )
 
+// Values to be taken from the user
 var (
-	proj  = &model.Project{}
-	stack string
+	name        string
+	link        string
+	description string
+	stack       string
+)
+
+type (
+	successAddProjectMsg struct{}
+	errorAddProjectMsg   struct {
+		err error
+	}
 )
 
 type AddProjectViewModel struct {
-	state          AddProjectViewState
-	form           *huh.Form
-	quitting       bool
-	err            error
-	help           help.Model
+	// holds the current state of the view
+	state AddProjectViewState
+
+	// form to take input from user
+	form *huh.Form
+
+	// quitting is true when user wants to quit the view
+	quitting bool
+
+	err error
+
+	// help is a help.Model that displays help text
+	help help.Model
+
+	// loadingSpinner is a spinner.Model that displays a spinner while
 	loadingSpinner spinner.Model
-	keymap         utils.KeyMap
-	isSubmitted    bool
+
+	// keymap is the keybindings for the view
+	keymap utils.KeyMap
+
+	// isSubmitted is true when user has submitted the form
+	isSubmitted bool
+
+	// projService is the service instance for project
+	projService *service.IProject
 }
 
-func NewAddProjectView() AddProjectViewModel {
+func NewAddProjectView(projService *service.IProject) AddProjectViewModel {
 	form := huh.NewForm(
 		huh.NewGroup(
 			huh.NewInput().
@@ -42,21 +78,21 @@ func NewAddProjectView() AddProjectViewModel {
 				Placeholder("Enter project name").
 				CharLimit(50).
 				Prompt("?").
-				Value(&proj.Name),
+				Value(&name),
 
 			huh.NewInput().
 				Title("Link to the Project ?").
 				Placeholder("Enter project link").
 				CharLimit(50).
 				Prompt("?").
-				Value(&proj.Link),
+				Value(&link),
 
 			huh.NewInput().
 				Title("Description of the Project ?").
 				Placeholder("Enter short description of project").
 				CharLimit(100).
 				Prompt("?").
-				Value(&proj.Description),
+				Value(&description),
 
 			huh.NewInput().
 				Title("Tech Stack used in the Project ?").
@@ -83,6 +119,7 @@ func NewAddProjectView() AddProjectViewModel {
 		isSubmitted:    false,
 		quitting:       false,
 		keymap:         utils.DefaultKeyMap(),
+		projService:    projService,
 	}
 
 	return m
@@ -96,6 +133,14 @@ func (p AddProjectViewModel) Init() tea.Cmd {
 
 func (p AddProjectViewModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	switch msg := msg.(type) {
+	case successAddProjectMsg:
+		p.state = successAddProject
+		return p, tea.Quit
+	case errorAddProjectMsg:
+		// TODO: Handle error properly
+		log.Println("Error adding project: ", msg.err)
+		p.err = errors.New("could not add project. Please try again")
+		return p, tea.Quit
 	case tea.KeyMsg:
 		switch {
 		case key.Matches(msg, p.keymap.Quit):
@@ -118,9 +163,61 @@ func (p AddProjectViewModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		p.form = f
 		cmds = append(cmds, cmd)
 	}
+
+	// If the form is submitted, send the add project request
+	if p.form.State == huh.StateCompleted && p.state == editing {
+		p.state = sendingAddProjectReq
+		cmds = append(cmds, p.addProjectCmd())
+		cmds = append(cmds, p.loadingSpinner.Tick)
+	}
+
+	switch p.state {
+	case sendingAddProjectReq:
+		p.loadingSpinner, cmd = p.loadingSpinner.Update(msg)
+		cmds = append(cmds, cmd)
+	default:
+	}
+
 	return p, tea.Batch(cmds...)
 }
 
 func (p AddProjectViewModel) View() string {
-	return p.form.View()
+	var s strings.Builder
+
+	switch p.form.State {
+	case huh.StateCompleted:
+		s.WriteString(fmt.Sprintf("Wow Cool! Adding your %s project.", name))
+		s.WriteString("\n\n")
+		s.WriteString("Please wait a moment...")
+		s.WriteString("\n")
+		return s.String() + p.loadingSpinner.View()
+	default:
+		return p.form.View()
+	}
+
+}
+
+// addProjectCmd returns a tea.Cmd that sends the add project request
+func (p AddProjectViewModel) addProjectCmd() tea.Cmd {
+	return func() tea.Msg {
+		proj := model.Project{
+			Name:        name,
+			Link:        link,
+			Description: description,
+			Stacks:      nil,
+		}
+
+		// Split the stack string by comma and add to the project model
+		stacks := strings.Split(stack, ",")
+		for _, s := range stacks {
+			proj.Stacks = append(proj.Stacks, model.TechStack{Name: s})
+		}
+
+		if err := (*p.projService).AddProject(proj); err != nil {
+			return errorAddProjectMsg{
+				err: err,
+			}
+		}
+		return successAddProjectMsg{}
+	}
 }

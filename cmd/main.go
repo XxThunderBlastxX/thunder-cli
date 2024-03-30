@@ -4,16 +4,24 @@ import (
 	"log"
 	"os"
 
+	tea "github.com/charmbracelet/bubbletea"
 	"github.com/urfave/cli/v2"
 
-	cmd2 "github.com/XxThunderBlastxX/thunder-cli/internal/cmd"
+	c "github.com/XxThunderBlastxX/thunder-cli/internal/cmd"
 )
 
 func main() {
+	f, err := tea.LogToFile("bubbletea.log", "thunder-cli")
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	defer f.Close()
+
 	app := &cli.App{
 		Name:   "thunder",
 		Usage:  "used to interact with thunder-api",
-		Action: cmd2.RootAction(),
+		Action: c.RootAction(),
 		Commands: []*cli.Command{
 			{
 				Name:  "project",
@@ -22,7 +30,7 @@ func main() {
 					{
 						Name:   "add",
 						Usage:  "add a project",
-						Action: cmd2.AddProjectAction(),
+						Action: c.AddProjectAction(),
 					},
 				},
 			},
