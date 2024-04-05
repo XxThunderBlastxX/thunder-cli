@@ -1,6 +1,7 @@
 # Miscelleneous
 .env
 *.log
+internal/config/config.yaml
 
 # binaries
 bin

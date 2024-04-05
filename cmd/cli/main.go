@@ -8,6 +8,7 @@ import (
 	"github.com/urfave/cli/v2"
 
 	"github.com/XxThunderBlastxX/thunder-cli/internal/cmd"
+	"github.com/XxThunderBlastxX/thunder-cli/internal/config"
 )
 
 func main() {
@@ -22,6 +23,12 @@ func main() {
 			log.Fatal(err)
 		}
 	}(f)
+
+	// Load app config
+	appConfig, err := config.NewAppConfig()
+	if err != nil {
+		log.Fatal(err)
+	}
 
 	app := &cli.App{
 		Name:   "thunder",
@@ -38,6 +45,11 @@ func main() {
 						Action: cmd.AddProjectAction(),
 					},
 				},
+			},
+			{
+				Name:   "login",
+				Usage:  "login to thunder-api",
+				Action: cmd.LoginAction(appConfig),
 			},
 		},
 	}
