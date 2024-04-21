@@ -1,37 +1,44 @@
 package config
 
 import (
+	"bytes"
 	"embed"
-	"io/fs"
 
-	"gopkg.in/yaml.v3"
+	"github.com/spf13/viper"
 )
 
-//go:embed config.yaml
-var f embed.FS
+//go:embed .env
+var envFile embed.FS
 
 type Config struct {
-	Name        string `yaml:"name"`
-	Link        string `yaml:"link"`
-	Description string `yaml:"description"`
-	Auth        struct {
-		Domain   string `yaml:"domain"`
-		ClientId string `yaml:"client_id"`
-		Audience string `yaml:"audience"`
-		Scope    string `yaml:"scope"`
-	} `yaml:"auth"`
+	AuthDomain       string `mapstructure:"AUTH_DOMAIN"`
+	AuthClientId     string `mapstructure:"AUTH_CLIENT_ID"`
+	AuthScope        string `mapstructure:"AUTH_SCOPE"`
+	AuthAudience     string `mapstructure:"AUTH_AUDIENCE"`
+	AuthAccessToken  string `mapstructure:"AUTH_ACCESS_TOKEN"`
+	AuthRefreshToken string `mapstructure:"AUTH_REFRESH_TOKEN"`
 }
 
 func NewAppConfig() (*Config, error) {
 	config := Config{}
 
-	data, err := fs.ReadFile(f, "config.yaml")
+	// Read the embedded .env file
+	envContent, err := envFile.ReadFile(".env")
 	if err != nil {
 		return nil, err
 	}
 
-	err = yaml.Unmarshal(data, &config)
-	if err != nil {
+	viper.AddConfigPath(".")
+	viper.SetConfigName(".env")
+	viper.SetConfigType("env")
+
+	if err := viper.ReadConfig(bytes.NewBuffer(envContent)); err != nil {
+		return nil, err
+	}
+
+	viper.AutomaticEnv()
+
+	if err := viper.Unmarshal(&config); err != nil {
 		return nil, err
 	}
 

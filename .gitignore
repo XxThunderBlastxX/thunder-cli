@@ -1,5 +1,5 @@
 # Miscelleneous
-.env
+internal/config/.env
 *.log
 internal/config/config.yaml
 

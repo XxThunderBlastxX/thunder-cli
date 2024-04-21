@@ -18,11 +18,11 @@ func LoginAction(appConfig *config.Config) cli.ActionFunc {
 		// Start the Device Authorization Flow
 		res, err := client.R().
 			SetFormData(map[string]string{
-				"client_id": appConfig.Auth.ClientId,
-				"scope":     appConfig.Auth.Scope,
-				"audience":  appConfig.Auth.Audience,
+				"client_id": appConfig.AuthClientId,
+				"scope":     appConfig.AuthScope,
+				"audience":  appConfig.AuthAudience,
 			}).
-			Post("https://" + appConfig.Auth.Domain + "/oauth/device/code")
+			Post("https://" + appConfig.AuthDomain + "/oauth/device/code")
 
 		if err != nil {
 			fmt.Println("Error requesting device code:", err)
@@ -58,9 +58,9 @@ func LoginAction(appConfig *config.Config) cli.ActionFunc {
 				SetFormData(map[string]string{
 					"grant_type":  "urn:ietf:params:oauth:grant-type:device_code",
 					"device_code": result.DeviceCode,
-					"client_id":   appConfig.Auth.ClientId,
+					"client_id":   appConfig.AuthClientId,
 				}).
-				Post("https://" + appConfig.Auth.Domain + "/oauth/token")
+				Post("https://" + appConfig.AuthDomain + "/oauth/token")
 
 			if err == nil && tokenResp.StatusCode() == 200 {
 				fmt.Println("Login successful.")
