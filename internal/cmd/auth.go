@@ -2,18 +2,26 @@ package cmd
 
 import (
 	"fmt"
+	"os"
 	"time"
 
 	"github.com/go-resty/resty/v2"
+	"github.com/goccy/go-json"
 	"github.com/pkg/browser"
 	"github.com/urfave/cli/v2"
 
 	"github.com/XxThunderBlastxX/thunder-cli/internal/config"
 )
 
+type authResponse struct {
+	accessToken string `json:"access_token"`
+	idToken     string `json:"id_token"`
+}
+
 func LoginAction(appConfig *config.Config) cli.ActionFunc {
 	return func(c *cli.Context) error {
 		client := resty.New()
+		token := authResponse{}
 
 		// Start the Device Authorization Flow
 		res, err := client.R().
@@ -49,12 +57,16 @@ func LoginAction(appConfig *config.Config) cli.ActionFunc {
 		}
 
 		// Show URL to user or open in browser
-		fmt.Println("Please open the following URL in your browser and enter the user code:", result.VerificationUriComplete)
-		browser.OpenURL(result.VerificationUriComplete)
+		fmt.Println("Please open the following URL in your browser :", result.VerificationUriComplete)
+		fmt.Println("and verify the user code:", result.UserCode)
+		if err := browser.OpenURL(result.VerificationUriComplete); err != nil {
+			fmt.Println("Error opening browser:", err)
+			return err
+		}
 
 		// Poll for token
 		for {
-			tokenResp, err := client.R().
+			authResponse, err := client.R().
 				SetFormData(map[string]string{
 					"grant_type":  "urn:ietf:params:oauth:grant-type:device_code",
 					"device_code": result.DeviceCode,
@@ -62,9 +74,18 @@ func LoginAction(appConfig *config.Config) cli.ActionFunc {
 				}).
 				Post("https://" + appConfig.AuthDomain + "/oauth/token")
 
-			if err == nil && tokenResp.StatusCode() == 200 {
-				fmt.Println("Login successful.")
-				fmt.Println("Access Token:", tokenResp.String())
+			if err == nil && authResponse.StatusCode() == 200 {
+				fmt.Println("✅ Login successful.")
+
+				if err := json.Unmarshal(authResponse.Body(), &token); err != nil {
+					return err
+				}
+
+				if err := os.Setenv("AUTH_ACCESS_TOKEN", token.accessToken); err != nil {
+					return err
+				}
+				// TODO: Save refresh token
+
 				break
 			}
 
