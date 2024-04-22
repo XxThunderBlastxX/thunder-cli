@@ -4,10 +4,12 @@ import (
 	"bytes"
 	"errors"
 	"io"
+	"log"
 	"net/http"
 
 	"github.com/goccy/go-json"
 
+	"github.com/XxThunderBlastxX/thunder-cli/internal/config"
 	"github.com/XxThunderBlastxX/thunder-cli/internal/model"
 )
 
@@ -16,14 +18,12 @@ type IProject interface {
 }
 
 type ProjectService struct {
-	http    *http.Client
-	baseUrl string
+	config *config.Config
 }
 
-func NewProjectService(http *http.Client, baseUrl string) IProject {
+func NewProjectService(config *config.Config) IProject {
 	return &ProjectService{
-		http:    http,
-		baseUrl: baseUrl,
+		config: config,
 	}
 }
 
@@ -32,10 +32,31 @@ func (p *ProjectService) AddProject(project model.Project) error {
 	if err != nil {
 		return err
 	}
-
-	res, err := p.http.Post(p.baseUrl+"/projects/add", "application/json", bytes.NewBuffer(projectJson))
+	k, err := NewKeyRingService()
 	if err != nil {
 		return err
+	}
+
+	accessToken, err := k.Get("AUTH_ACCESS_TOKEN")
+	if err != nil {
+		return err
+	}
+
+	// Creating new http request
+	req, err := http.NewRequest("POST", p.config.BaseApiUrl+"/projects/add", bytes.NewBuffer(projectJson))
+	if err != nil {
+		log.Fatal("Error creating request: ", err)
+	}
+
+	// Set headers
+	req.Header.Set("Content-Type", "application/json")
+	req.Header.Add("Authorization", "Bearer "+string(accessToken.Data))
+
+	// Create a new HTTP client and send the request
+	client := &http.Client{}
+	res, err := client.Do(req)
+	if err != nil {
+		log.Fatal("Error sending request: ", err)
 	}
 
 	defer func(body io.ReadCloser) {

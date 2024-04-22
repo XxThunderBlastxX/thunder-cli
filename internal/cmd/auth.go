@@ -2,26 +2,26 @@ package cmd
 
 import (
 	"fmt"
-	"os"
 	"time"
 
+	"github.com/99designs/keyring"
 	"github.com/go-resty/resty/v2"
 	"github.com/goccy/go-json"
 	"github.com/pkg/browser"
 	"github.com/urfave/cli/v2"
 
 	"github.com/XxThunderBlastxX/thunder-cli/internal/config"
+	"github.com/XxThunderBlastxX/thunder-cli/internal/service"
 )
-
-type authResponse struct {
-	accessToken string `json:"access_token"`
-	idToken     string `json:"id_token"`
-}
 
 func LoginAction(appConfig *config.Config) cli.ActionFunc {
 	return func(c *cli.Context) error {
 		client := resty.New()
-		token := authResponse{}
+		var token interface{}
+		k, err := service.NewKeyRingService()
+		if err != nil {
+			return err
+		}
 
 		// Start the Device Authorization Flow
 		res, err := client.R().
@@ -81,7 +81,11 @@ func LoginAction(appConfig *config.Config) cli.ActionFunc {
 					return err
 				}
 
-				if err := os.Setenv("AUTH_ACCESS_TOKEN", token.accessToken); err != nil {
+				// Saving token to local keyring
+				if err := k.Set(keyring.Item{
+					Key:  "AUTH_ACCESS_TOKEN",
+					Data: []byte(token.(map[string]interface{})["access_token"].(string)),
+				}); err != nil {
 					return err
 				}
 				// TODO: Save refresh token

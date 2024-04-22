@@ -2,24 +2,25 @@ package cmd
 
 import (
 	"fmt"
-	"net/http"
 	"os"
-	"time"
 
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/urfave/cli/v2"
 
+	"github.com/XxThunderBlastxX/thunder-cli/internal/config"
 	"github.com/XxThunderBlastxX/thunder-cli/internal/service"
 	"github.com/XxThunderBlastxX/thunder-cli/pkg/style"
 	"github.com/XxThunderBlastxX/thunder-cli/pkg/view"
 )
 
 func AddProjectAction() cli.ActionFunc {
-	return func(c *cli.Context) error {
-		h := &http.Client{
-			Timeout: time.Minute * 2,
+	return func(ctx *cli.Context) error {
+		c, err := config.NewAppConfig()
+		if err != nil {
+			return err
 		}
-		s := service.NewProjectService(h, "http://localhost:4040")
+
+		s := service.NewProjectService(c)
 
 		p, err := tea.NewProgram(view.NewAddProjectView(&s)).Run()
 		if err != nil {

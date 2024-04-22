@@ -11,12 +11,14 @@ import (
 var envFile embed.FS
 
 type Config struct {
-	AuthDomain       string `mapstructure:"AUTH_DOMAIN"`
-	AuthClientId     string `mapstructure:"AUTH_CLIENT_ID"`
-	AuthScope        string `mapstructure:"AUTH_SCOPE"`
-	AuthAudience     string `mapstructure:"AUTH_AUDIENCE"`
-	AuthAccessToken  string `mapstructure:"AUTH_ACCESS_TOKEN"`
-	AuthRefreshToken string `mapstructure:"AUTH_REFRESH_TOKEN"`
+	// API
+	BaseApiUrl string `mapstructure:"THUNDER_BASE_API_URL"`
+
+	// Auth
+	AuthDomain   string `mapstructure:"AUTH_DOMAIN"`
+	AuthClientId string `mapstructure:"AUTH_CLIENT_ID"`
+	AuthScope    string `mapstructure:"AUTH_SCOPE"`
+	AuthAudience string `mapstructure:"AUTH_AUDIENCE"`
 }
 
 func NewAppConfig() (*Config, error) {
