@@ -11,6 +11,12 @@ build:
 	@echo "Building binary..."
 	@go build -o bin/$(BINARY_NAME) $(MAIN_PACKAGE)
 
+## install: install the binary
+.PHONY: install
+install:
+	@sudo cp bin/$(BINARY_NAME) /usr/local/bin
+	@echo "Installed binary ✅"
+
 ## run: run the production code
 .PHONY: run
 run:
