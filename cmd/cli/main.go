@@ -3,6 +3,7 @@ package main
 import (
 	"log"
 	"os"
+	"path/filepath"
 
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/urfave/cli/v2"
@@ -10,6 +11,43 @@ import (
 	"github.com/XxThunderBlastxX/thunder-cli/internal/cmd"
 	"github.com/XxThunderBlastxX/thunder-cli/internal/config"
 )
+
+func init() {
+	//Get home directory
+	homeDir, err := os.UserHomeDir()
+	if err != nil {
+		return
+	}
+
+	//Get absolute path of config directory
+	dirPath, err := filepath.Abs(homeDir + "/.config/thunder-cli")
+	if err != nil {
+		return
+	}
+
+	// Check if directory does not exist
+	if _, err := os.Stat(dirPath); os.IsNotExist(err) {
+		err := os.Mkdir(dirPath, os.ModePerm)
+		if err != nil {
+			return
+		}
+	}
+
+	// Create a new config.json
+	configPath := dirPath + "/config.json"
+	if _, err := os.Stat(configPath); os.IsNotExist(err) {
+		file, err := os.Create(configPath)
+		if err != nil {
+			return
+		}
+		defer func(file *os.File) {
+			err := file.Close()
+			if err != nil {
+				return
+			}
+		}(file)
+	}
+}
 
 func main() {
 	f, err := tea.LogToFile("thunder-cli.log", "thunder-cli")

@@ -32,15 +32,12 @@ func (p *ProjectService) AddProject(project model.Project) error {
 	if err != nil {
 		return err
 	}
-	k, err := NewKeyRingService()
+	cfg, err := config.NewAppConfig()
 	if err != nil {
 		return err
 	}
 
-	accessToken, err := k.Get("AUTH_ACCESS_TOKEN")
-	if err != nil {
-		return err
-	}
+	accessToken := cfg.Viper.GetString("access_token")
 
 	// Creating new http request
 	req, err := http.NewRequest("POST", p.config.BaseApiUrl+"/projects/add", bytes.NewBuffer(projectJson))
@@ -50,7 +47,7 @@ func (p *ProjectService) AddProject(project model.Project) error {
 
 	// Set headers
 	req.Header.Set("Content-Type", "application/json")
-	req.Header.Add("Authorization", "Bearer "+string(accessToken.Data))
+	req.Header.Add("Authorization", "Bearer "+accessToken)
 
 	// Create a new HTTP client and send the request
 	client := &http.Client{}
@@ -67,7 +64,7 @@ func (p *ProjectService) AddProject(project model.Project) error {
 	}(res.Body)
 
 	if res.StatusCode != 200 {
-		return errors.New("ops! could not add project. Please try again")
+		return errors.New("ops! could not add project. Please try again : " + res.Status)
 	}
 
 	return nil

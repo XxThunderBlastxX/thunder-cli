@@ -61,6 +61,10 @@ func NewAppConfig() (*Config, error) {
 	v.SetConfigName("config")
 	v.SetConfigType("json")
 
+	if err := v.ReadInConfig(); err != nil {
+		return nil, err
+	}
+
 	config.Viper = v
 
 	return &config, nil

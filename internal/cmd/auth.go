@@ -81,7 +81,7 @@ func LoginAction(appConfig *config.Config) cli.ActionFunc {
 
 				// Save token to config file
 				conf.Viper.Set("access_token", token.(map[string]interface{})["access_token"].(string))
-				if err := conf.Viper.SafeWriteConfig(); err != nil {
+				if err := conf.Viper.WriteConfig(); err != nil {
 					return err
 				}
 				break
