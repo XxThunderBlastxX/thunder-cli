@@ -1,48 +1,67 @@
 package config
 
 import (
-	"bytes"
-	"embed"
+	"os"
+	"path/filepath"
 
 	"github.com/spf13/viper"
 )
 
-//go:embed .env
-var envFile embed.FS
-
 type Config struct {
-	// API
-	BaseApiUrl string `mapstructure:"THUNDER_BASE_API_URL"`
+	BaseApiUrl string
 
-	// Auth
-	AuthDomain   string `mapstructure:"AUTH_DOMAIN"`
-	AuthClientId string `mapstructure:"AUTH_CLIENT_ID"`
-	AuthScope    string `mapstructure:"AUTH_SCOPE"`
-	AuthAudience string `mapstructure:"AUTH_AUDIENCE"`
+	AuthDomain   string
+	AuthClientId string
+	AuthScope    string
+	AuthAudience string
+
+	Viper *viper.Viper
 }
 
 func NewAppConfig() (*Config, error) {
+	var v = viper.New()
+
+	var (
+		thunderAPIBaseUrl = "https://api.koustav.dev"
+		authDomain        = "thunder.jp.auth0.com"
+		authClientID      = "X43uDaR6gjwJEFPEdP7jNGxXTlCPAjfa"
+		authAudience      = "https://thunder.jp.auth0.com/api/v2/"
+		authScope         = "openid"
+	)
+
 	config := Config{}
 
-	// Read the embedded .env file
-	envContent, err := envFile.ReadFile(".env")
+	config.AuthDomain = authDomain
+	config.AuthClientId = authClientID
+	config.AuthScope = authScope
+	config.AuthAudience = authAudience
+	config.BaseApiUrl = thunderAPIBaseUrl
+
+	//Get home directory
+	homeDir, err := os.UserHomeDir()
 	if err != nil {
 		return nil, err
 	}
 
-	viper.AddConfigPath(".")
-	viper.SetConfigName(".env")
-	viper.SetConfigType("env")
-
-	if err := viper.ReadConfig(bytes.NewBuffer(envContent)); err != nil {
+	//Get absolute path of config directory
+	dirPath, err := filepath.Abs(homeDir + "/.config/thunder-cli")
+	if err != nil {
 		return nil, err
 	}
 
-	viper.AutomaticEnv()
-
-	if err := viper.Unmarshal(&config); err != nil {
-		return nil, err
+	// Check if directory exists
+	if _, err := os.Stat(dirPath); os.IsNotExist(err) {
+		err := os.Mkdir(dirPath, os.ModePerm)
+		if err != nil {
+			return nil, err
+		}
 	}
+
+	v.AddConfigPath("/$HOME/.config/thunder-cli")
+	v.SetConfigName("config")
+	v.SetConfigType("json")
+
+	config.Viper = v
 
 	return &config, nil
 }

@@ -4,21 +4,19 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/99designs/keyring"
 	"github.com/go-resty/resty/v2"
 	"github.com/goccy/go-json"
 	"github.com/pkg/browser"
 	"github.com/urfave/cli/v2"
 
 	"github.com/XxThunderBlastxX/thunder-cli/internal/config"
-	"github.com/XxThunderBlastxX/thunder-cli/internal/service"
 )
 
 func LoginAction(appConfig *config.Config) cli.ActionFunc {
 	return func(c *cli.Context) error {
 		client := resty.New()
 		var token interface{}
-		k, err := service.NewKeyRingService()
+		conf, err := config.NewAppConfig()
 		if err != nil {
 			return err
 		}
@@ -81,15 +79,11 @@ func LoginAction(appConfig *config.Config) cli.ActionFunc {
 					return err
 				}
 
-				// Saving token to local keyring
-				if err := k.Set(keyring.Item{
-					Key:  "AUTH_ACCESS_TOKEN",
-					Data: []byte(token.(map[string]interface{})["access_token"].(string)),
-				}); err != nil {
+				// Save token to config file
+				conf.Viper.Set("access_token", token.(map[string]interface{})["access_token"].(string))
+				if err := conf.Viper.SafeWriteConfig(); err != nil {
 					return err
 				}
-				// TODO: Save refresh token
-
 				break
 			}
 
