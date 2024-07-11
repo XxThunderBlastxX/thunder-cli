@@ -220,7 +220,7 @@ func (p AddProjectViewModel) addProjectCmd() tea.Cmd {
 		// Split the stack string by comma and add to the project model
 		stacks := strings.Split(stack, ",")
 		for _, s := range stacks {
-			proj.Stacks = append(proj.Stacks, model.TechStack{Name: s})
+			proj.Stacks = append(proj.Stacks, s)
 		}
 
 		if err := (*p.projService).AddProject(proj); err != nil {
