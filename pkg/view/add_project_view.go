@@ -85,21 +85,21 @@ func NewAddProjectView(projService *service.IProject) AddProjectViewModel {
 			huh.NewInput().
 				Title("Link to the Project ?").
 				Placeholder("Enter project link").
-				CharLimit(50).
+				CharLimit(120).
 				Prompt("? ").
 				Value(&link),
 
 			huh.NewInput().
 				Title("Description of the Project ?").
 				Placeholder("Enter short description of project").
-				CharLimit(100).
+				CharLimit(200).
 				Prompt("? ").
 				Value(&description),
 
 			huh.NewInput().
 				Title("Tech Stack used in the Project ?").
 				Placeholder("Enter tech stack with comma seperated values").
-				CharLimit(50).
+				CharLimit(100).
 				Prompt("? ").
 				Value(&stack),
 
@@ -220,7 +220,7 @@ func (p AddProjectViewModel) addProjectCmd() tea.Cmd {
 		// Split the stack string by comma and add to the project model
 		stacks := strings.Split(stack, ",")
 		for _, s := range stacks {
-			proj.Stacks = append(proj.Stacks, s)
+			proj.Stacks = append(proj.Stacks, strings.Trim(s, " "))
 		}
 
 		if err := (*p.projService).AddProject(proj); err != nil {
